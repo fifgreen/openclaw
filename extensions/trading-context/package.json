@@ -1,0 +1,28 @@
+{
+  "name": "@openclaw/trading-context",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenClaw trading context plugin — MemDir, ContextEngine, HaltProtocol",
+  "type": "module",
+  "dependencies": {
+    "ioredis": "^5.4.2",
+    "js-tiktoken": "^1.0.15",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "openclaw": "workspace:*"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.4.1-beta.1"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
