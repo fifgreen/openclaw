@@ -27,6 +27,7 @@ export async function bootstrapHistoricalDataHandler(
 export function buildBootstrapHistoricalDataTool() {
   return {
     name: "bootstrap_historical_data",
+    label: "Bootstrap Historical Data",
     description:
       "Backfills historical 1-minute candle data for the specified symbols into TimescaleDB. " +
       "Idempotent — re-running skips already-populated intervals. " +
@@ -52,7 +53,10 @@ export function buildBootstrapHistoricalDataTool() {
         : [];
       const days = typeof params["days"] === "number" ? params["days"] : 7;
       const result = await bootstrapHistoricalDataHandler(symbols, days);
-      return JSON.stringify(result);
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(result) }],
+        details: result,
+      };
     },
   };
 }

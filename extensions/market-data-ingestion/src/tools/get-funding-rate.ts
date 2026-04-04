@@ -38,6 +38,7 @@ export function getFundingRateHandler(
 export function buildGetFundingRateTool(store: MarketDataStore) {
   return {
     name: "get_funding_rate",
+    label: "Get Funding Rate",
     description:
       "Returns the current perpetual futures funding rate for a trading symbol. " +
       "If exchange is omitted, returns the most recently updated rate across all active exchanges.",
@@ -60,7 +61,10 @@ export function buildGetFundingRateTool(store: MarketDataStore) {
       const symbol = String(params["symbol"] ?? "");
       const exchange = params["exchange"] as Exchange | undefined;
       const result = getFundingRateHandler(store, symbol, exchange);
-      return JSON.stringify(result);
+      return Promise.resolve({
+        content: [{ type: "text" as const, text: JSON.stringify(result) }],
+        details: result,
+      });
     },
   };
 }

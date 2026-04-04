@@ -28,13 +28,14 @@ export interface HaltJournalEntry {
   sessionId: string;
   symbol: string;
   timestamp: number;
+  triggeredAt: number;
   reason: string;
   message: string;
   canceledOrderIds: string[];
   closedPositions: Array<{ positionId: string; closedAt: number; price: number }>;
   cancelErrors: string[];
   closeErrors: string[];
-  memDirSnapshot: Record<string, unknown>;
+  memDirSnapshot?: Record<string, unknown>;
 }
 
 export type JournalEntry = TickJournalEntry | HaltJournalEntry;

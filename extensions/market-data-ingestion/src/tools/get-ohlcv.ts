@@ -26,6 +26,7 @@ export async function getOHLCVHandler(
 export function buildGetOHLCVTool() {
   return {
     name: "get_ohlcv",
+    label: "Get OHLCV",
     description:
       "Returns OHLCV (open/high/low/close/volume) candles for a trading symbol from TimescaleDB. " +
       "Available timeframes: 1m, 5m, 1h. Default limit: 100 candles.",
@@ -53,7 +54,10 @@ export function buildGetOHLCVTool() {
       const timeframe = (params["timeframe"] as "1m" | "5m" | "1h") ?? "1m";
       const limit = typeof params["limit"] === "number" ? params["limit"] : 100;
       const result = await getOHLCVHandler(symbol, timeframe, limit);
-      return JSON.stringify(result);
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(result) }],
+        details: result,
+      };
     },
   };
 }

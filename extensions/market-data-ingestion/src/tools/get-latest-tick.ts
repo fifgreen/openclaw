@@ -41,6 +41,7 @@ export function getLatestTickHandler(
 export function buildGetLatestTickTool(store: MarketDataStore) {
   return {
     name: "get_latest_tick",
+    label: "Get Latest Tick",
     description:
       "Returns the latest price tick for a trading symbol from the live market data feed. " +
       "If exchange is omitted, returns the most recent tick across all active exchanges.",
@@ -63,7 +64,10 @@ export function buildGetLatestTickTool(store: MarketDataStore) {
       const symbol = String(params["symbol"] ?? "");
       const exchange = params["exchange"] as Exchange | undefined;
       const result = getLatestTickHandler(store, symbol, exchange);
-      return JSON.stringify(result);
+      return Promise.resolve({
+        content: [{ type: "text" as const, text: JSON.stringify(result) }],
+        details: result,
+      });
     },
   };
 }

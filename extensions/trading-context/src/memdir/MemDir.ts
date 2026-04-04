@@ -1,4 +1,4 @@
-import type Redis from "ioredis";
+import type { Redis } from "ioredis";
 import { z } from "zod";
 import { getRedisClient, type RedisConnectionOptions } from "./index.js";
 import {

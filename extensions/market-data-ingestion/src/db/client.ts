@@ -30,10 +30,7 @@ export async function closePool(): Promise<void> {
 }
 
 /** Typed parameterized query helper. Returns an array of typed rows. */
-export async function query<T extends Record<string, unknown>>(
-  sql: string,
-  params: unknown[] = [],
-): Promise<T[]> {
-  const result = await getPool().query<T>(sql, params);
-  return result.rows;
+export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
+  const result = await getPool().query(sql, params);
+  return result.rows as T[];
 }

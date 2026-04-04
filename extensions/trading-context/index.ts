@@ -29,6 +29,7 @@ export default definePluginEntry({
     api.registerTool(
       (_ctx) => ({
         name: "get_session_history",
+        label: "Get Session History",
         description:
           "Return recent trading decisions from the decision journal for the current month.",
         parameters: {
@@ -43,14 +44,26 @@ export default definePluginEntry({
         },
         async execute(_toolCallId: string, params: Record<string, unknown>) {
           if (!journalDir) {
-            return JSON.stringify({ entries: [], note: "journalDir not configured" });
+            const result = { entries: [], note: "journalDir not configured" };
+            return {
+              content: [{ type: "text" as const, text: JSON.stringify(result) }],
+              details: result,
+            };
           }
           const limit = typeof params["limit"] === "number" ? Math.max(1, params["limit"]) : 20;
           try {
             const entries = await readRecentJournalEntries(journalDir, limit);
-            return JSON.stringify({ entries, total: entries.length });
+            const result = { entries, total: entries.length };
+            return {
+              content: [{ type: "text" as const, text: JSON.stringify(result) }],
+              details: result,
+            };
           } catch {
-            return JSON.stringify({ entries: [], error: "journal not yet initialised" });
+            const result = { entries: [], error: "journal not yet initialised" };
+            return {
+              content: [{ type: "text" as const, text: JSON.stringify(result) }],
+              details: result,
+            };
           }
         },
       }),
@@ -60,6 +73,7 @@ export default definePluginEntry({
     api.registerTool(
       (_ctx) => ({
         name: "get_last_decision",
+        label: "Get Last Decision",
         description: "Retrieve the most recent journaled trading decision.",
         parameters: {
           type: "object" as const,
@@ -68,13 +82,25 @@ export default definePluginEntry({
         },
         async execute(_toolCallId: string, _params: Record<string, unknown>) {
           if (!journalDir) {
-            return JSON.stringify({ decision: null, note: "journalDir not configured" });
+            const result = { decision: null, note: "journalDir not configured" };
+            return {
+              content: [{ type: "text" as const, text: JSON.stringify(result) }],
+              details: result,
+            };
           }
           try {
             const entries = await readRecentJournalEntries(journalDir, 1);
-            return JSON.stringify({ decision: entries[0] ?? null });
+            const result = { decision: entries[0] ?? null };
+            return {
+              content: [{ type: "text" as const, text: JSON.stringify(result) }],
+              details: result,
+            };
           } catch {
-            return JSON.stringify({ decision: null, error: "journal not yet initialised" });
+            const result = { decision: null, error: "journal not yet initialised" };
+            return {
+              content: [{ type: "text" as const, text: JSON.stringify(result) }],
+              details: result,
+            };
           }
         },
       }),
@@ -85,6 +111,7 @@ export default definePluginEntry({
     api.registerTool(
       (_ctx) => ({
         name: "get_market_snapshot",
+        label: "Get Market Snapshot",
         description:
           "Read the current MemDir market state snapshot: macro regime, fear/greed, funding rate, and sentiment.",
         parameters: {
@@ -111,14 +138,18 @@ export default definePluginEntry({
             memDir.get({ key: "trading_halted", symbol: "*" }),
           ]);
 
-          return JSON.stringify({
+          const result = {
             symbol,
             trading_halted: halt?.value ?? null,
             macro_regime: macro?.value ?? null,
             fear_greed: fg?.value ?? null,
             funding_rate: fr?.value ?? null,
             sentiment: sent?.value ?? null,
-          });
+          };
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify(result) }],
+            details: result,
+          };
         },
       }),
       { names: ["get_market_snapshot"] },
@@ -127,6 +158,7 @@ export default definePluginEntry({
     api.registerTool(
       (_ctx) => ({
         name: "get_quant_features",
+        label: "Get Quant Features",
         description:
           "Read quantitative signal features from MemDir (populated by ingestion agents in Phase 1).",
         parameters: {
@@ -146,11 +178,15 @@ export default definePluginEntry({
           const memDir = mkMemDir({ client: getRedisClient() });
 
           const fr = await memDir.get({ key: "funding_rate", symbol });
-          return JSON.stringify({
+          const result = {
             symbol,
             funding_rate: fr?.value ?? null,
             note: "Full quant feature vector available after Phase 1 (market data ingestion) is built.",
-          });
+          };
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify(result) }],
+            details: result,
+          };
         },
       }),
       { names: ["get_quant_features"] },

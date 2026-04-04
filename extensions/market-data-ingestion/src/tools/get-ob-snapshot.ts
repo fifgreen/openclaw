@@ -72,6 +72,7 @@ function getSpread(snapshot: OrderBookSnapshot): number | undefined {
 export function buildGetOBSnapshotTool(store: MarketDataStore) {
   return {
     name: "get_ob_snapshot",
+    label: "Get OB Snapshot",
     description:
       "Returns the current order book snapshot for a trading symbol. " +
       "If exchange is omitted, returns the snapshot from the exchange with the tightest spread. " +
@@ -100,7 +101,10 @@ export function buildGetOBSnapshotTool(store: MarketDataStore) {
       const exchange = params["exchange"] as Exchange | undefined;
       const depth = typeof params["depth"] === "number" ? params["depth"] : DEFAULT_DEPTH;
       const result = getOBSnapshotHandler(store, symbol, exchange, depth);
-      return JSON.stringify(result);
+      return Promise.resolve({
+        content: [{ type: "text" as const, text: JSON.stringify(result) }],
+        details: result,
+      });
     },
   };
 }

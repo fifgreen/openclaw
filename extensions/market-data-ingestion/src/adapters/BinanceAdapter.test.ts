@@ -51,11 +51,7 @@ describe("BinanceAdapter", () => {
   });
 
   it("onTick callback receives a valid PriceTick after a synthetic trade message", async () => {
-    const adapter = new BinanceAdapter() as unknown as {
-      connectSpot: () => void;
-      symbols: string[];
-      tickCallbacks: Array<(t: PriceTick) => void>;
-    } & BinanceAdapter;
+    const adapter = new BinanceAdapter();
     adapter.subscribe(["BTC/USDT"]);
 
     const tickReceived = new Promise<PriceTick>((resolve) => {
