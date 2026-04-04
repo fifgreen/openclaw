@@ -1,0 +1,30 @@
+{
+  "id": "trading-context",
+  "kind": "plugin",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "redisUrl": {
+        "type": "string",
+        "description": "Redis connection URL for MemDir (default: redis://localhost:6379)"
+      },
+      "memDirTimeoutMs": {
+        "type": "number",
+        "description": "Bounded timeout for MemDir reads in milliseconds (default: 5000)"
+      },
+      "memDirConsecutiveTimeoutThreshold": {
+        "type": "number",
+        "description": "Number of consecutive MemDir timeouts before halt protocol fires (default: 3)"
+      },
+      "haltNotificationCooldownMs": {
+        "type": "number",
+        "description": "Cooldown between halt notifications in milliseconds (default: 60000)"
+      },
+      "journalDir": {
+        "type": "string",
+        "description": "Directory for JSONL decision journal files (default: {stateDir}/training/trades)"
+      }
+    }
+  }
+}

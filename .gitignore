@@ -145,5 +145,8 @@ changelog/fragments/
 
 # Local scratch workspace
 .tmp/
+
+# agents
+marcel/
 test/fixtures/openclaw-vitest-unit-report.json
 analysis/

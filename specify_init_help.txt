@@ -1,0 +1,160 @@
+                                                      
+ Usage: specify init [OPTIONS] [PROJECT_NAME]         
+                                                      
+ Initialize a new Specify project.                    
+                                                      
+ By default, project files are downloaded from the    
+ latest GitHub release.                               
+ Use --offline to scaffold from assets bundled inside 
+ the specify-cli                                      
+ package instead (no internet access required, ideal  
+ for air-gapped or                                    
+ enterprise environments).                            
+                                                      
+ NOTE: Starting with v0.6.0, bundled assets will be   
+ used by default and                                  
+ the --offline flag will be removed. The GitHub       
+ download path will be                                
+ retired because bundled assets eliminate the need    
+ for network access,                                  
+ avoid proxy/firewall issues, and guarantee that      
+ templates always match                               
+ the installed CLI version.                           
+                                                      
+ This command will:                                   
+ 1. Check that required tools are installed (git is   
+ optional)                                            
+ 2. Let you choose your AI assistant                  
+ 3. Download template from GitHub (or use bundled     
+ assets with --offline)                               
+ 4. Initialize a fresh git repository (if not         
+ --no-git and no existing repo)                       
+ 5. Optionally set up AI assistant commands           
+                                                      
+ Examples:                                            
+     specify init my-project                          
+     specify init my-project --ai claude              
+     specify init my-project --ai copilot --no-git    
+     specify init --ignore-agent-tools my-project     
+     specify init . --ai claude         # Initialize  
+ in current directory                                 
+     specify init .                     # Initialize  
+ in current directory (interactive AI selection)      
+     specify init --here --ai claude    # Alternative 
+ syntax for current directory                         
+     specify init --here --ai codex --ai-skills       
+     specify init --here --ai codebuddy               
+     specify init --here --ai vibe      # Initialize  
+ with Mistral Vibe support                            
+     specify init --here                              
+     specify init --here --force  # Skip confirmation 
+ when current directory not empty                     
+     specify init my-project --ai claude --ai-skills  
+ # Install agent skills                               
+     specify init --here --ai gemini --ai-skills      
+     specify init my-project --ai generic             
+ --ai-commands-dir .myagent/commands/  # Unsupported  
+ agent                                                
+     specify init my-project --offline  # Use bundled 
+ assets (no network access)                           
+     specify init my-project --ai claude --preset     
+ healthcare-compliance  # With preset                 
+                                                      
+╭─ Arguments ────────────────────────────────────────╮
+│   project_name      [PROJECT_NAME]  Name for your  │
+│                                     new project    │
+│                                     directory      │
+│                                     (optional if   │
+│                                     using --here,  │
+│                                     or use '.' for │
+│                                     current        │
+│                                     directory)     │
+╰────────────────────────────────────────────────────╯
+╭─ Options ──────────────────────────────────────────╮
+│ --ai                      TEXT  AI assistant to    │
+│                                 use: agy, amp,     │
+│                                 auggie, bob,       │
+│                                 claude, codebuddy, │
+│                                 codex, copilot,    │
+│                                 cursor-agent,      │
+│                                 gemini, iflow,     │
+│                                 junie, kilocode,   │
+│                                 kimi, kiro-cli,    │
+│                                 opencode, pi,      │
+│                                 qodercli, qwen,    │
+│                                 roo, shai,         │
+│                                 tabnine, trae,     │
+│                                 vibe, windsurf, or │
+│                                 generic (requires  │
+│                                 --ai-commands-dir… │
+│                                 Use 'kiro' as an   │
+│                                 alias for          │
+│                                 'kiro-cli'.        │
+│ --ai-commands-dir         TEXT  Directory for      │
+│                                 agent command      │
+│                                 files (required    │
+│                                 with --ai generic, │
+│                                 e.g.               │
+│                                 .myagent/commands… │
+│ --script                  TEXT  Script type to     │
+│                                 use: sh or ps      │
+│ --ignore-agent-to…              Skip checks for AI │
+│                                 agent tools like   │
+│                                 Claude Code        │
+│ --no-git                        Skip git           │
+│                                 repository         │
+│                                 initialization     │
+│ --here                          Initialize project │
+│                                 in the current     │
+│                                 directory instead  │
+│                                 of creating a new  │
+│                                 one                │
+│ --force                         Force              │
+│                                 merge/overwrite    │
+│                                 when using --here  │
+│                                 (skip              │
+│                                 confirmation)      │
+│ --skip-tls                      Skip SSL/TLS       │
+│                                 verification (not  │
+│                                 recommended)       │
+│ --debug                         Show verbose       │
+│                                 diagnostic output  │
+│                                 for network and    │
+│                                 extraction         │
+│                                 failures           │
+│ --github-token            TEXT  GitHub token to    │
+│                                 use for API        │
+│                                 requests (or set   │
+│                                 GH_TOKEN or        │
+│                                 GITHUB_TOKEN       │
+│                                 environment        │
+│                                 variable)          │
+│ --ai-skills                     Install Prompt.MD  │
+│                                 templates as agent │
+│                                 skills (requires   │
+│                                 --ai)              │
+│ --offline                       Use assets bundled │
+│                                 in the specify-cli │
+│                                 package instead of │
+│                                 downloading from   │
+│                                 GitHub (no network │
+│                                 access required).  │
+│                                 Bundled assets     │
+│                                 will become the    │
+│                                 default in v0.6.0  │
+│                                 and this flag will │
+│                                 be removed.        │
+│ --preset                  TEXT  Install a preset   │
+│                                 during             │
+│                                 initialization (by │
+│                                 preset ID)         │
+│ --branch-numbering        TEXT  Branch numbering   │
+│                                 strategy:          │
+│                                 'sequential' (001, │
+│                                 002, ...) or       │
+│                                 'timestamp'        │
+│                                 (YYYYMMDD-HHMMSS)  │
+│ --help                          Show this message  │
+│                                 and exit.          │
+╰────────────────────────────────────────────────────╯
+
