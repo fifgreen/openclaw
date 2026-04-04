@@ -28,6 +28,7 @@ export interface HaltJournalEntry {
   sessionId: string;
   symbol: string;
   timestamp: number;
+  triggeredAt: number;
   reason: string;
   message: string;
   canceledOrderIds: string[];

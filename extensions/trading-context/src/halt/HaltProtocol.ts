@@ -95,6 +95,14 @@ export class HaltProtocol {
     }
 
     // Step 5: Log full halt context to decision journal
+    // Capture MemDir snapshot for audit trail
+    const memDirSnapshot: Record<string, unknown> = {
+      trading_halted: (await this.memDir.get({ key: "trading_halted", symbol: "*" }))?.value,
+      macro_regime: (await this.memDir.get({ key: "macro_regime", symbol }))?.value,
+      fear_greed: (await this.memDir.get({ key: "fear_greed", symbol: "*" }))?.value,
+      consecutive_timeouts: (await this.memDir.get({ key: "consecutive_timeouts", symbol }))?.value,
+    };
+
     await this.journaler.writeHalt({
       symbol,
       reason,
@@ -104,6 +112,7 @@ export class HaltProtocol {
       closedPositions: closeResult.closedPositions,
       cancelErrors: cancelResult.errors,
       closeErrors: closeResult.errors,
+      memDirSnapshot,
     });
 
     // Step 6: Stop tick loop

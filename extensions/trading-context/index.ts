@@ -1,7 +1,7 @@
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import type { OpenClawPluginApi } from "./runtime-api.js";
 import { readRecentJournalEntries } from "./src/engine/Journaler.js";
-import { riskGateHook } from "./src/hooks/risk-gate.js";
+import { createRiskGateHook } from "./src/hooks/risk-gate.js";
 
 export * from "./src/api.js";
 
@@ -11,17 +11,39 @@ export default definePluginEntry({
   description:
     "MemDir shared state, ContextEngine, HaltProtocol, and decision journaling for trading agents",
   register(api: OpenClawPluginApi) {
-    const journalDir: string | undefined = (() => {
+    // Extract config fields from pluginConfig
+    const config = (() => {
       const raw = api.pluginConfig;
-      if (raw && typeof raw === "object" && "journalDir" in raw) {
-        const d = (raw as Record<string, unknown>)["journalDir"];
-        return typeof d === "string" ? d : undefined;
+      if (!raw || typeof raw !== "object") {
+        return {
+          redisUrl: undefined,
+          memDirTimeoutMs: undefined,
+          memDirConsecutiveTimeoutThreshold: undefined,
+          haltNotificationCooldownMs: undefined,
+          journalDir: undefined,
+        };
       }
-      return undefined;
+      const cfg = raw as Record<string, unknown>;
+      return {
+        redisUrl: typeof cfg["redisUrl"] === "string" ? cfg["redisUrl"] : undefined,
+        memDirTimeoutMs: typeof cfg["memDirTimeoutMs"] === "number" ? cfg["memDirTimeoutMs"] : undefined,
+        memDirConsecutiveTimeoutThreshold:
+          typeof cfg["memDirConsecutiveTimeoutThreshold"] === "number"
+            ? cfg["memDirConsecutiveTimeoutThreshold"]
+            : undefined,
+        haltNotificationCooldownMs:
+          typeof cfg["haltNotificationCooldownMs"] === "number"
+            ? cfg["haltNotificationCooldownMs"]
+            : undefined,
+        journalDir: typeof cfg["journalDir"] === "string" ? cfg["journalDir"] : undefined,
+      };
     })();
 
-    // Register the before-tool-call risk gate (T018)
-    api.on("before_tool_call", riskGateHook);
+    // Register the before-tool-call risk gate (T018) with config
+    api.on("before_tool_call", createRiskGateHook({
+      redisUrl: config.redisUrl,
+      memDirTimeoutMs: config.memDirTimeoutMs,
+    }));
 
     // Register history query tools (T015b / FR-004)
     // History is sourced from the persisted decision journal (JSONL) so it survives across
@@ -42,12 +64,12 @@ export default definePluginEntry({
           required: [],
         },
         async execute(_toolCallId: string, params: Record<string, unknown>) {
-          if (!journalDir) {
+          if (!config.journalDir) {
             return JSON.stringify({ entries: [], note: "journalDir not configured" });
           }
           const limit = typeof params["limit"] === "number" ? Math.max(1, params["limit"]) : 20;
           try {
-            const entries = await readRecentJournalEntries(journalDir, limit);
+            const entries = await readRecentJournalEntries(config.journalDir, limit);
             return JSON.stringify({ entries, total: entries.length });
           } catch {
             return JSON.stringify({ entries: [], error: "journal not yet initialised" });
@@ -67,11 +89,11 @@ export default definePluginEntry({
           required: [],
         },
         async execute(_toolCallId: string, _params: Record<string, unknown>) {
-          if (!journalDir) {
+          if (!config.journalDir) {
             return JSON.stringify({ decision: null, note: "journalDir not configured" });
           }
           try {
-            const entries = await readRecentJournalEntries(journalDir, 1);
+            const entries = await readRecentJournalEntries(config.journalDir, 1);
             return JSON.stringify({ decision: entries[0] ?? null });
           } catch {
             return JSON.stringify({ decision: null, error: "journal not yet initialised" });
@@ -101,7 +123,10 @@ export default definePluginEntry({
           const { createMemDir: mkMemDir } = await import("./src/memdir/MemDir.js");
           const { getRedisClient } = await import("./src/memdir/index.js");
           const symbol = typeof params["symbol"] === "string" ? params["symbol"] : "btc";
-          const memDir = mkMemDir({ client: getRedisClient() });
+          const memDir = mkMemDir({
+            client: getRedisClient(config.redisUrl ? { url: config.redisUrl } : {}),
+            timeoutMs: config.memDirTimeoutMs,
+          });
 
           const [macro, fg, fr, sent, halt] = await Promise.all([
             memDir.get({ key: "macro_regime", symbol }),
@@ -143,7 +168,10 @@ export default definePluginEntry({
           const { createMemDir: mkMemDir } = await import("./src/memdir/MemDir.js");
           const { getRedisClient } = await import("./src/memdir/index.js");
           const symbol = typeof params["symbol"] === "string" ? params["symbol"] : "btc";
-          const memDir = mkMemDir({ client: getRedisClient() });
+          const memDir = mkMemDir({
+            client: getRedisClient(config.redisUrl ? { url: config.redisUrl } : {}),
+            timeoutMs: config.memDirTimeoutMs,
+          });
 
           const fr = await memDir.get({ key: "funding_rate", symbol });
           return JSON.stringify({

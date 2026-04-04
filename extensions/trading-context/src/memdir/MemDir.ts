@@ -92,7 +92,9 @@ export function createMemDir(opts: MemDirOptions = {}): MemDir {
     const entry = result.data as MemDirValue<InferKeyValue<K>>;
 
     // Freshness check: if TTL set and value is stale, treat as missing
-    const effectiveTtl = entry.ttlMs ?? registryTtlMs;
+    // Use explicit ttlMs from entry if present, otherwise fall back to registry TTL
+    // null means "never expire", so only apply freshness check if we have a numeric TTL
+    const effectiveTtl = entry.ttlMs !== undefined ? entry.ttlMs : registryTtlMs;
     if (effectiveTtl !== null && Date.now() - entry.updatedAt > effectiveTtl) {
       return null;
     }
