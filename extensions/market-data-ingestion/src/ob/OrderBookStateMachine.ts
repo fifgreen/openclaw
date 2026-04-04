@@ -92,7 +92,7 @@ export class OrderBookStateMachine {
     if (
       this.lastSequenceId !== -1 &&
       sequenceId !== this.lastSequenceId + 1 &&
-      // Allow gaps of exactly 1 (some exchanges skip IDs in depth-only updates)
+      // Any jump beyond the next expected sequence ID is treated as a gap and triggers resync.
       sequenceId > this.lastSequenceId + 1
     ) {
       console.warn(

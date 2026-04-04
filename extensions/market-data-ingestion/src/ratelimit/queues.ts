@@ -67,14 +67,16 @@ class TokenBucketQueue {
   }
 }
 
-// One fallback queue per exchange (created lazily)
-const fallbackQueues = new Map<Exchange, TokenBucketQueue>();
+// One fallback queue per (exchange, quotaFraction) pair (created lazily)
+const fallbackQueues = new Map<string, TokenBucketQueue>();
 
-function getFallbackQueue(exchange: Exchange): TokenBucketQueue {
-  let q = fallbackQueues.get(exchange);
+function getFallbackQueue(exchange: Exchange, quotaFraction: number = 1.0): TokenBucketQueue {
+  const key = `${exchange}:${quotaFraction}`;
+  let q = fallbackQueues.get(key);
   if (!q) {
-    q = new TokenBucketQueue(RATE_CAPS[exchange]);
-    fallbackQueues.set(exchange, q);
+    const effectiveRpm = Math.floor(RATE_CAPS[exchange] * quotaFraction);
+    q = new TokenBucketQueue(effectiveRpm);
+    fallbackQueues.set(key, q);
   }
   return q;
 }
@@ -162,8 +164,19 @@ type BullMQWorkerLike = { close: () => Promise<void> };
 const bullmqWorkers = new Map<Exchange, BullMQWorkerLike>();
 
 /** Resolve the rate-limiter queue for the given exchange, creating it if needed. */
-async function getOrCreateQueue(exchange: Exchange): Promise<BullMQQueueLike | null> {
-  return bullmqQueues.get(exchange) ?? null;
+async function getOrCreateQueue(
+  exchange: Exchange,
+  redisClient?: Redis | null,
+): Promise<BullMQQueueLike | null> {
+  const existing = bullmqQueues.get(exchange);
+  if (existing) return existing;
+
+  // Lazy-create the queue if Redis is available
+  if (redisClient) {
+    return createRateLimitQueue(exchange, redisClient);
+  }
+
+  return null;
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -178,12 +191,14 @@ export interface RateLimitedRestOptions {
   quotaFraction?: number;
   /** BullMQ job priority (lower = higher priority). Default: 10 */
   priority?: number;
+  /** Optional Redis client to use for BullMQ queues */
+  redisClient?: Redis | null;
 }
 
 /**
  * Execute `fn` subject to the per-exchange REST rate limit.
  *
- * Preferred path: BullMQ worker dequeues the job and calls `fn` in-process.
+ * Preferred path: BullMQ worker processes the job and rate-limits execution.
  * Fallback path: In-process `TokenBucketQueue` throttles calls directly.
  */
 export async function rateLimitedRest<T>(
@@ -191,48 +206,75 @@ export async function rateLimitedRest<T>(
   fn: () => Promise<T>,
   opts: RateLimitedRestOptions = {},
 ): Promise<T> {
-  const queue = await getOrCreateQueue(exchange);
+  const queue = await getOrCreateQueue(exchange, opts.redisClient);
 
   if (!queue) {
-    // Fallback: in-process token bucket
-    const tbq = getFallbackQueue(exchange);
+    // Fallback: in-process token bucket with quotaFraction applied
+    const quotaFraction = opts.quotaFraction ?? 1.0;
+    const tbq = getFallbackQueue(exchange, quotaFraction);
     await tbq.acquire();
     return fn();
   }
 
-  // BullMQ path: we use a simple promise-based pattern where the job payload
-  // contains a unique ID and a separate Map resolves the promise when the
-  // worker completes the job.
-  //
-  // For self-contained plugin operation (no separate worker process), we keep
-  // a local worker alive in the same process.
+  // BullMQ path: worker actually executes fn() so rate limiting works correctly
   const bullmq = await getBullMQ();
   if (!bullmq) {
-    const tbq = getFallbackQueue(exchange);
+    const quotaFraction = opts.quotaFraction ?? 1.0;
+    const tbq = getFallbackQueue(exchange, quotaFraction);
     await tbq.acquire();
     return fn();
   }
 
   const connection = (queue as unknown as { opts?: { connection?: Redis } }).opts?.connection;
   if (!connection) {
-    const tbq = getFallbackQueue(exchange);
+    const quotaFraction = opts.quotaFraction ?? 1.0;
+    const tbq = getFallbackQueue(exchange, quotaFraction);
     await tbq.acquire();
     return fn();
   }
 
+  // Generate a unique job ID for result tracking
+  const jobId = `rest-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
   // Ensure a worker is alive for this exchange (in-process)
-  if (!bullmqWorkers.has(exchange)) {
+  // Worker needs to be created once per unique quotaFraction to respect the rate limit
+  const workerKey = `${exchange}:${opts.quotaFraction ?? 1.0}`;
+  if (!bullmqWorkers.has(workerKey)) {
     const rpmCap =
       ((queue as unknown as Record<string, unknown>)["_rpmCap"] as number | undefined) ??
       RATE_CAPS[exchange];
 
     const effectiveRpm = Math.floor(rpmCap * (opts.quotaFraction ?? 1.0));
 
+    // Store pending job results in a Map
+    const pendingResults = new Map<
+      string,
+      {
+        resolve: (value: unknown) => void;
+        reject: (err: unknown) => void;
+        fn: () => Promise<unknown>;
+      }
+    >();
+
     const worker = new bullmq.Worker(
       `trading:ratelimit:${exchange}`,
       async (job) => {
-        // Worker just signals completion — actual fn call is outside the queue
-        return job.data;
+        // Worker executes the actual REST call here, respecting the rate limit
+        const pending = pendingResults.get(job.id ?? "");
+        if (!pending) {
+          console.warn(`[ratelimit] No pending job found for ${job.id}`);
+          return;
+        }
+        try {
+          const result = await pending.fn();
+          pending.resolve(result);
+          return result;
+        } catch (err) {
+          pending.reject(err);
+          throw err;
+        } finally {
+          pendingResults.delete(job.id ?? "");
+        }
       },
       {
         connection,
@@ -240,24 +282,54 @@ export async function rateLimitedRest<T>(
         concurrency: 1,
       },
     );
-    bullmqWorkers.set(exchange, worker);
+
+    // Store both worker and its pending results map
+    bullmqWorkers.set(workerKey, {
+      close: () => worker.close(),
+      _pendingResults: pendingResults,
+    } as BullMQWorkerLike & { _pendingResults: typeof pendingResults });
   }
 
-  // Enqueue a sentinel job and await its completion as a throttle gate,
-  // then immediately call fn in the caller's context.
+  const workerRecord = bullmqWorkers.get(workerKey) as
+    | (BullMQWorkerLike & {
+        _pendingResults: Map<
+          string,
+          {
+            resolve: (value: unknown) => void;
+            reject: (err: unknown) => void;
+            fn: () => Promise<unknown>;
+          }
+        >;
+      })
+    | undefined;
+
+  if (!workerRecord) {
+    // Shouldn't happen but fall back
+    const quotaFraction = opts.quotaFraction ?? 1.0;
+    const tbq = getFallbackQueue(exchange, quotaFraction);
+    await tbq.acquire();
+    return fn();
+  }
+
+  // Enqueue the job and register its callback
   return new Promise<T>((resolve, reject) => {
-    queue
-      .add(`rest-call`, {}, { priority: opts.priority ?? 10 })
-      .then(() => fn().then(resolve, reject))
-      .catch((err: unknown) => {
-        // BullMQ failure — fall back to token bucket
-        console.warn(`[ratelimit] BullMQ job add failed, falling back:`, err);
-        const tbq = getFallbackQueue(exchange);
-        tbq
-          .acquire()
-          .then(() => fn().then(resolve, reject))
-          .catch(reject);
-      });
+    workerRecord._pendingResults.set(jobId, {
+      resolve: resolve as (value: unknown) => void,
+      reject,
+      fn: fn as () => Promise<unknown>,
+    });
+
+    queue.add(`rest-call`, {}, { jobId, priority: opts.priority ?? 10 }).catch((err: unknown) => {
+      // BullMQ failure — fall back to token bucket
+      console.warn(`[ratelimit] BullMQ job add failed, falling back:`, err);
+      workerRecord._pendingResults.delete(jobId);
+      const quotaFraction = opts.quotaFraction ?? 1.0;
+      const tbq = getFallbackQueue(exchange, quotaFraction);
+      tbq
+        .acquire()
+        .then(() => fn().then(resolve, reject))
+        .catch(reject);
+    });
   });
 }
 

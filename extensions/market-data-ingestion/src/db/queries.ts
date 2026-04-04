@@ -146,10 +146,14 @@ export async function queryOHLCV(
   if (!view) throw new Error(`Unknown timeframe: ${timeframe}`);
   const rows = await query<OHLCVRow>(
     `SELECT timestamp, symbol, open, high, low, close, volume
-     FROM ${view}
-     WHERE symbol = $1
-     ORDER BY timestamp ASC
-     LIMIT $2`,
+     FROM (
+       SELECT timestamp, symbol, open, high, low, close, volume
+       FROM ${view}
+       WHERE symbol = $1
+       ORDER BY timestamp DESC
+       LIMIT $2
+     ) AS latest
+     ORDER BY timestamp ASC`,
     [symbol, limit],
   );
   return rows.map((r) => ({

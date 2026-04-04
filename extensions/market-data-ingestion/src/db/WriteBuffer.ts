@@ -97,7 +97,11 @@ export class WriteBuffer<T> {
       try {
         await this.options.onFlush(rows);
       } catch (err: unknown) {
+        // Re-queue the failed batch at the front so it can be retried later
+        // without reordering it behind rows that arrived during the flush.
+        this.buffer = rows.concat(this.buffer);
         console.warn("[WriteBuffer] flush error:", err);
+        break;
       }
     }
   }

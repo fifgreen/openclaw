@@ -33,15 +33,33 @@ export interface MarketDataStore {
   getOB(exchange: Exchange, symbol: string): OrderBookSnapshot | null;
   setFunding(exchange: Exchange, symbol: string, rate: FundingRate): void;
   getFunding(exchange: Exchange, symbol: string): FundingRate | null;
+  /** Run periodic cleanup to remove expired entries and prevent unbounded memory growth */
+  startCleanup(): void;
+  /** Stop the cleanup timer */
+  stopCleanup(): void;
 }
 
 export function createMarketDataStore(): MarketDataStore {
   const ticks = new Map<string, Entry<PriceTick>>();
   const obs = new Map<string, Entry<OrderBookSnapshot>>();
   const funding = new Map<string, Entry<FundingRate>>();
+  let cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
   function isAlive<T>(entry: Entry<T> | undefined): entry is Entry<T> {
     return entry !== undefined && entry.expireAt > Date.now();
+  }
+
+  function cleanupExpiredEntries(): void {
+    const now = Date.now();
+    for (const [key, entry] of ticks) {
+      if (entry.expireAt <= now) ticks.delete(key);
+    }
+    for (const [key, entry] of obs) {
+      if (entry.expireAt <= now) obs.delete(key);
+    }
+    for (const [key, entry] of funding) {
+      if (entry.expireAt <= now) funding.delete(key);
+    }
   }
 
   return {
@@ -53,7 +71,13 @@ export function createMarketDataStore(): MarketDataStore {
     },
     getTick(exchange, symbol) {
       const entry = ticks.get(`${exchange}:tick:${symbol}`);
-      return isAlive(entry) ? entry.value : null;
+      if (isAlive(entry)) {
+        return entry.value;
+      } else {
+        // Delete expired entry on read
+        if (entry) ticks.delete(`${exchange}:tick:${symbol}`);
+        return null;
+      }
     },
     setOB(exchange, symbol, snapshot) {
       obs.set(`${exchange}:ob:${symbol}`, {
@@ -63,7 +87,13 @@ export function createMarketDataStore(): MarketDataStore {
     },
     getOB(exchange, symbol) {
       const entry = obs.get(`${exchange}:ob:${symbol}`);
-      return isAlive(entry) ? entry.value : null;
+      if (isAlive(entry)) {
+        return entry.value;
+      } else {
+        // Delete expired entry on read
+        if (entry) obs.delete(`${exchange}:ob:${symbol}`);
+        return null;
+      }
     },
     setFunding(exchange, symbol, rate) {
       funding.set(`${exchange}:funding:${symbol}`, {
@@ -73,7 +103,24 @@ export function createMarketDataStore(): MarketDataStore {
     },
     getFunding(exchange, symbol) {
       const entry = funding.get(`${exchange}:funding:${symbol}`);
-      return isAlive(entry) ? entry.value : null;
+      if (isAlive(entry)) {
+        return entry.value;
+      } else {
+        // Delete expired entry on read
+        if (entry) funding.delete(`${exchange}:funding:${symbol}`);
+        return null;
+      }
+    },
+    startCleanup() {
+      if (cleanupTimer !== null) return;
+      // Run cleanup every 60 seconds to prevent unbounded memory growth
+      cleanupTimer = setInterval(cleanupExpiredEntries, 60_000);
+    },
+    stopCleanup() {
+      if (cleanupTimer !== null) {
+        clearInterval(cleanupTimer);
+        cleanupTimer = null;
+      }
     },
   };
 }

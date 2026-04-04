@@ -45,15 +45,30 @@ export default definePluginEntry({
           (cfg["flush"] as Record<string, number> | undefined)?.["maxRows"] ?? 1000;
         const flushIntervalMs =
           (cfg["flush"] as Record<string, number> | undefined)?.["intervalMs"] ?? 500;
+        const timescaleUrl =
+          typeof cfg["timescaleUrl"] === "string" ? cfg["timescaleUrl"] : undefined;
+        const sampleObEveryMs =
+          typeof cfg["sampleObEveryMs"] === "number" ? cfg["sampleObEveryMs"] : 100;
 
         ctx.logger.info(
           `[market-data-ingestion] starting — symbols=${symbols.join(",")} flush.maxRows=${flushMaxRows}`,
         );
 
+        // Initialize the pool with the configured timescaleUrl (if provided)
+        if (timescaleUrl) {
+          const { getPool } = await import("./src/db/client.js");
+          getPool(timescaleUrl);
+        }
+
+        // Start periodic cleanup of expired entries in the market data store
+        store.startCleanup();
+
         startBuffers({ maxRows: flushMaxRows, flushIntervalMs });
 
         // One OB state machine per exchange per symbol.
         const obMachines = new Map<string, OrderBookStateMachine>();
+        const obLastSampleTime = new Map<string, number>();
+
         for (const sym of symbols) {
           for (const ex of ["binance", "bybit"] as const) {
             const fetchFn = ex === "binance" ? fetchBinanceSnapshot : fetchBybitSnapshot;
@@ -63,11 +78,18 @@ export default definePluginEntry({
               depth: 20,
               fetchSnapshot: fetchFn,
             });
+            const key = `${ex}:${sym}`;
             machine.onLive((snapshot) => {
               store.setOB(ex, sym, snapshot);
-              getOBSnapshotBuffer().push(snapshot);
+              // Throttle OB snapshot writes to DB based on sampleObEveryMs
+              const now = Date.now();
+              const lastSample = obLastSampleTime.get(key) ?? 0;
+              if (now - lastSample >= sampleObEveryMs) {
+                getOBSnapshotBuffer().push(snapshot);
+                obLastSampleTime.set(key, now);
+              }
             });
-            obMachines.set(`${ex}:${sym}`, machine);
+            obMachines.set(key, machine);
           }
         }
 
@@ -115,6 +137,7 @@ export default definePluginEntry({
           | undefined;
         const bybit = (ctx as Record<string, unknown>)["_mdi_bybit"] as BybitAdapter | undefined;
         await Promise.allSettled([binance?.disconnect(), bybit?.disconnect()]);
+        store.stopCleanup();
         await stopBuffers();
         await closePool();
         await closeRateLimitWorkers();
