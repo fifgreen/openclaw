@@ -56,6 +56,7 @@ export async function queryLatestMacroSnapshot(pool: Pool): Promise<MacroSnapsho
 
 export interface SentimentSnapshotRow {
   symbol: string;
+  timestamp: string;
   fear_greed_score: number;
   fear_greed_label: string;
   twitter_score: number;
@@ -66,24 +67,24 @@ export interface SentimentSnapshotRow {
   funding_rate: number;
   composite_score: number;
   regime: string;
-  recorded_at?: string;
 }
 
 /**
- * Inserts a sentiment snapshot. recorded_at defaults to NOW() on the DB side.
+ * Inserts a sentiment snapshot with explicit timestamp.
  */
 export async function insertSentimentSnapshot(
   pool: Pool,
-  row: Omit<SentimentSnapshotRow, "recorded_at">,
+  row: SentimentSnapshotRow,
 ): Promise<void> {
   await pool.query(
     `INSERT INTO sentiment_snapshots
-     (symbol, fear_greed_score, fear_greed_label, twitter_score, tweet_volume,
+     (symbol, timestamp, fear_greed_score, fear_greed_label, twitter_score, tweet_volume,
       reddit_score, reddit_post_volume, funding_bias, funding_rate,
       composite_score, regime)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
     [
       row.symbol,
+      row.timestamp,
       row.fear_greed_score,
       row.fear_greed_label,
       row.twitter_score,
@@ -103,6 +104,7 @@ export async function insertSentimentSnapshot(
 // ---------------------------------------------------------------------------
 
 export interface NewsEventRow {
+  id?: number;
   headline: string;
   source: string;
   symbols: string[];
@@ -154,7 +156,7 @@ export async function queryNewsEvents(
   if (symbol && sinceIso) {
     return queryRows<NewsEventRow>(
       pool,
-      `SELECT headline, source, symbols, sentiment, impact_class, relevance_score, url, published_at
+      `SELECT id, headline, source, symbols, sentiment, impact_class, relevance_score, url, published_at
        FROM news_events
        WHERE symbols @> ARRAY[$1]::text[] AND published_at >= $2
        ORDER BY published_at DESC
@@ -166,7 +168,7 @@ export async function queryNewsEvents(
   if (symbol) {
     return queryRows<NewsEventRow>(
       pool,
-      `SELECT headline, source, symbols, sentiment, impact_class, relevance_score, url, published_at
+      `SELECT id, headline, source, symbols, sentiment, impact_class, relevance_score, url, published_at
        FROM news_events
        WHERE symbols @> ARRAY[$1]::text[]
        ORDER BY published_at DESC
@@ -177,7 +179,7 @@ export async function queryNewsEvents(
 
   return queryRows<NewsEventRow>(
     pool,
-    `SELECT headline, source, symbols, sentiment, impact_class, relevance_score, url, published_at
+    `SELECT id, headline, source, symbols, sentiment, impact_class, relevance_score, url, published_at
      FROM news_events
      ORDER BY published_at DESC
      LIMIT $1`,
@@ -198,13 +200,13 @@ export interface FeedAccuracyRow {
   evaluated_at: string;
 }
 
-/** Upserts feed accuracy metrics, keyed on (feed_name, period_days, evaluated_at date). */
+/** Upserts feed accuracy metrics, keyed on (feed_name, evaluated_at, period_days). */
 export async function upsertFeedAccuracy(pool: Pool, row: FeedAccuracyRow): Promise<void> {
   await pool.query(
     `INSERT INTO feed_accuracy
      (feed_name, total_predictions, correct_predictions, accuracy_pct, period_days, evaluated_at)
      VALUES ($1, $2, $3, $4, $5, $6)
-     ON CONFLICT (feed_name, period_days, evaluated_at::date)
+     ON CONFLICT (feed_name, evaluated_at, period_days)
      DO UPDATE SET
        total_predictions = EXCLUDED.total_predictions,
        correct_predictions = EXCLUDED.correct_predictions,

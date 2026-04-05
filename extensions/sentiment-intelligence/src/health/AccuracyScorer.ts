@@ -47,7 +47,7 @@ export async function scoreOutcome(pool: Pool, opts: ScoreOutcomeOptions): Promi
   await pool.query(
     `INSERT INTO feed_accuracy (feed_name, total_predictions, correct_predictions, accuracy_pct, period_days, evaluated_at)
      VALUES ($1, 1, $2, $3, 1, NOW())
-     ON CONFLICT (feed_name, period_days, evaluated_at::date) DO UPDATE SET
+     ON CONFLICT (feed_name, evaluated_at, period_days) DO UPDATE SET
        total_predictions = feed_accuracy.total_predictions + 1,
        correct_predictions = feed_accuracy.correct_predictions + EXCLUDED.correct_predictions,
        accuracy_pct = (feed_accuracy.correct_predictions + EXCLUDED.correct_predictions)::float
@@ -72,8 +72,8 @@ export async function queryFeedAccuracyStats(
     `SELECT SUM(total_predictions) AS total, SUM(correct_predictions) AS correct
      FROM feed_accuracy
      WHERE feed_name = $1
-       AND evaluated_at >= NOW() - INTERVAL '${days} days'`,
-    [feedName],
+       AND evaluated_at >= NOW() - make_interval(days => $2)`,
+    [feedName, days],
   );
 
   const total = parseInt(result.rows[0]?.total ?? "0", 10);

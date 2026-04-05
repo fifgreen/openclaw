@@ -5,7 +5,7 @@ import { MacroContextSchema, type MacroContext } from "../schema/MacroSnapshot.j
 /**
  * Hot-path macro context reader.
  * Reads from MemDir (key: macro_snapshot, symbol: "*") — no DB or network calls.
- * Returns null if the entry is missing or stale (by registry TTL of 24h).
+ * Returns { error: "not_found" } if the entry is missing or stale (by registry TTL of 24h).
  */
 export async function getMacroContext(
   memDir: ReturnType<typeof createMemDir>,

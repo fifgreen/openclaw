@@ -24,13 +24,13 @@ export async function getNewsEvents(
 ): Promise<NewsEvent[]> {
   const defaultLimit = opts.newsDefaultLimit ?? DEFAULT_LIMIT;
   const maxLimit = opts.newsMaxLimit ?? MAX_LIMIT;
-  const effectiveLimit = Math.min(limit ?? defaultLimit, maxLimit);
+  const effectiveLimit = Math.max(1, Math.min(limit ?? defaultLimit, maxLimit));
 
   const rows = await queryNewsEvents(pool, { symbol, limit: effectiveLimit });
 
   // Map DB row format to NewsEvent (queries.ts uses snake_case, schema uses camelCase)
   return rows.map((r) => ({
-    id: (r as unknown as Record<string, number>)["id"] ?? 0,
+    id: r.id ?? 0,
     headline: r.headline,
     source: r.source,
     url: r.url,

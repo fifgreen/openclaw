@@ -34,11 +34,13 @@ export class CryptoPanicFeed {
   readonly schedule = "*/30 * * * *";
 
   private readonly pool: Pool;
+  private readonly memDir: ReturnType<typeof createMemDir>;
   private readonly apiKey: string | undefined;
   private readonly classifierOpts: ClassifierOptions;
 
   constructor(opts: CryptoPanicFeedOptions) {
     this.pool = opts.pool;
+    this.memDir = opts.memDir;
     this.apiKey = opts.apiKey;
     this.classifierOpts = opts.classifierOpts ?? {};
   }
@@ -93,6 +95,13 @@ export class CryptoPanicFeed {
       });
       inserted++;
     }
+
+    // Write health update after successful poll
+    await this.memDir.set(
+      { key: "sentiment_health", symbol: "cryptopanic" },
+      { lastSuccessfulPoll: new Date().toISOString(), isStale: false },
+      { ttlMs: null, source: "CryptoPanicFeed" },
+    );
 
     return inserted;
   }
