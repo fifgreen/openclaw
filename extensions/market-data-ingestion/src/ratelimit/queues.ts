@@ -159,9 +159,9 @@ export async function createRateLimitQueue(
   }
 }
 
-// BullMQ Workers that actually run the jobs (one per exchange)
+// BullMQ Workers that actually run the jobs (one per exchange+quotaFraction pair)
 type BullMQWorkerLike = { close: () => Promise<void> };
-const bullmqWorkers = new Map<Exchange, BullMQWorkerLike>();
+const bullmqWorkers = new Map<string, BullMQWorkerLike>();
 
 /** Resolve the rate-limiter queue for the given exchange, creating it if needed. */
 async function getOrCreateQueue(
