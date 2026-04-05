@@ -537,8 +537,6 @@ importers:
 
   extensions/mistral: {}
 
-  extensions/modelstudio: {}
-
   extensions/moonshot: {}
 
   extensions/msteams:
@@ -615,6 +613,8 @@ importers:
       openclaw:
         specifier: workspace:*
         version: link:../..
+
+  extensions/qwen: {}
 
   extensions/searxng: {}
 
@@ -705,6 +705,8 @@ importers:
   extensions/venice: {}
 
   extensions/vercel-ai-gateway: {}
+
+  extensions/video-generation-core: {}
 
   extensions/vllm: {}
 
