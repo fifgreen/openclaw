@@ -47,7 +47,7 @@ _Rationale: Context windows are limited. By isolating context specific to variou
 
 ## Development Workflow
 
-- Changes impacting `packages/trading/quant` or Risk constraints MUST require an isolated unit test validating edge cases and zero-division fallbacks.
+- Changes impacting quantitative math, risk constraints, or ingestion integrity code (under `extensions/` or any future `packages/trading/` paths) MUST require an isolated unit test validating edge cases and zero-division fallbacks.
 - New strategies must ALWAYS cycle: `hypothesis` → `backtesting` → `testnet` → `live`, enforced systematically. There are no direct pushes to live strategy execution.
 
 ## Governance

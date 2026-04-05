@@ -1,0 +1,81 @@
+{
+  "id": "market-data-ingestion",
+  "kind": "plugin",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "timescaleUrl": {
+        "type": "string",
+        "description": "TimescaleDB/PostgreSQL connection URL (default: postgres://localhost:5432/trading)"
+      },
+      "symbols": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Symbols to subscribe to (default: [\"BTC/USDT\", \"ETH/USDT\"])"
+      },
+      "obDepth": {
+        "type": "number",
+        "description": "Order book depth to maintain per symbol/exchange (default: 20)"
+      },
+      "sampleObEveryMs": {
+        "type": "number",
+        "description": "Minimum interval between OB snapshot DB writes per symbol in ms (default: 10000)"
+      },
+      "flush": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "maxRows": {
+            "type": "number",
+            "description": "Flush WriteBuffer after this many rows (default: 1000)"
+          },
+          "intervalMs": {
+            "type": "number",
+            "description": "Flush WriteBuffer on this interval in ms (default: 500)"
+          }
+        }
+      },
+      "retention": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rawTicksDays": {
+            "type": "number",
+            "description": "Retention policy for raw price_ticks in days (default: 7)"
+          }
+        }
+      },
+      "rateLimit": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "binanceRPM": {
+            "type": "number",
+            "description": "Binance REST rate limit in requests per minute (default: 960)"
+          },
+          "bybitRPM": {
+            "type": "number",
+            "description": "Bybit REST rate limit in requests per minute (default: 480)"
+          }
+        }
+      },
+      "binanceApiKey": {
+        "type": "string",
+        "description": "Binance API key (SecretRef — never logged)"
+      },
+      "binanceApiSecret": {
+        "type": "string",
+        "description": "Binance API secret (SecretRef — never logged)"
+      },
+      "bybitApiKey": {
+        "type": "string",
+        "description": "Bybit API key (SecretRef — never logged)"
+      },
+      "bybitApiSecret": {
+        "type": "string",
+        "description": "Bybit API secret (SecretRef — never logged)"
+      }
+    }
+  }
+}

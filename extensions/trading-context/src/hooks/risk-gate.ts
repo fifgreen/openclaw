@@ -1,7 +1,17 @@
-import type {
-  PluginHookBeforeToolCallEvent,
-  PluginHookBeforeToolCallResult,
-} from "openclaw/plugin-sdk/core";
+// Local type mirrors of the plugin SDK's before_tool_call event/result shapes.
+// These types are not yet exported from openclaw/plugin-sdk/core; define locally
+// to avoid importing from internal src/**. Keep in sync with src/plugins/types.ts.
+type PluginHookBeforeToolCallEvent = {
+  toolName: string;
+  params: Record<string, unknown>;
+  runId?: string;
+  toolCallId?: string;
+};
+type PluginHookBeforeToolCallResult = {
+  params?: Record<string, unknown>;
+  block?: boolean;
+  blockReason?: string;
+};
 import { getRedisClient } from "../memdir/index.js";
 import { createMemDir } from "../memdir/MemDir.js";
 
