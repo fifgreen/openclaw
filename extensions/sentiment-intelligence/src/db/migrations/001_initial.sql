@@ -39,9 +39,9 @@ CREATE TABLE IF NOT EXISTS news_events (
   source                   TEXT        NOT NULL,
   url                      TEXT        NOT NULL,
   symbols                  TEXT[]      NOT NULL DEFAULT '{}',
-  impact_class             TEXT        NOT NULL,
+  impact_class             TEXT,
   sentiment                TEXT        NOT NULL,
-  classification_confidence REAL       NOT NULL,
+  relevance_score          REAL        NOT NULL,
   published_at             TIMESTAMPTZ NOT NULL,
   ingested_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -93,16 +93,17 @@ CREATE INDEX IF NOT EXISTS idx_sentiment_embeddings_hnsw
   ON sentiment_embeddings USING hnsw (embedding vector_cosine_ops);
 
 -- ----------------------------------------------------------------------------
--- 5. feed_accuracy — accuracy scoring per feed per day
+-- 5. feed_accuracy — accuracy scoring per feed and evaluation period
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS feed_accuracy (
   feed_name           TEXT        NOT NULL,
   correct_predictions INTEGER     NOT NULL DEFAULT 0,
   total_predictions   INTEGER     NOT NULL DEFAULT 0,
-  window_start        TIMESTAMPTZ NOT NULL,
-  window_end          TIMESTAMPTZ NOT NULL,
-  PRIMARY KEY (feed_name, window_start)
+  accuracy_pct        REAL        NOT NULL DEFAULT 0,
+  evaluated_at        TIMESTAMPTZ NOT NULL,
+  period_days         INTEGER     NOT NULL,
+  PRIMARY KEY (feed_name, evaluated_at, period_days)
 );
 
 CREATE INDEX IF NOT EXISTS idx_feed_accuracy_feed_scored
-  ON feed_accuracy (feed_name, window_start DESC);
+  ON feed_accuracy (feed_name, evaluated_at DESC);

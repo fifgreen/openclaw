@@ -64,11 +64,17 @@ export async function runMigrations(p: InstanceType<typeof Pool>): Promise<void>
     "001_initial.sql",
   );
   const sql = await readFile(migrationPath, "utf8");
+  // Remove full-line SQL comments before splitting so statements preceded by
+  // comment lines are still executed.
+  const normalizedSql = sql
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("--"))
+    .join("\n");
   // Execute statements sequentially; skip empty statements from splitting
-  const statements = sql
+  const statements = normalizedSql
     .split(";")
     .map((s) => s.trim())
-    .filter((s) => s.length > 0 && !s.startsWith("--"));
+    .filter((s) => s.length > 0);
   for (const stmt of statements) {
     await p.query(stmt);
   }

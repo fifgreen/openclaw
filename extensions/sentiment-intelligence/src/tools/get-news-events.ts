@@ -34,10 +34,8 @@ export async function getNewsEvents(
     source: r.source,
     url: r.url,
     sentiment: r.sentiment as NewsEvent["sentiment"],
-    impactClass: ((r as unknown as Record<string, string>)["impact_class"] ??
-      (r as unknown as Record<string, string>)["impactClass"] ??
-      "other") as NewsEvent["impactClass"],
-    classificationConfidence: (r as unknown as Record<string, number>)["relevance_score"] ?? 0.5,
+    impactClass: (r.impact_class ?? "other") as NewsEvent["impactClass"],
+    classificationConfidence: r.relevance_score,
     symbols: r.symbols,
     publishedAt: r.published_at,
   }));

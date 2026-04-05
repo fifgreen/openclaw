@@ -86,6 +86,7 @@ export class CryptoPanicFeed {
         source: item.source.title,
         symbols: itemSymbols.length > 0 ? itemSymbols : symbols,
         sentiment,
+        impact_class: impactClass,
         relevance_score: confidence,
         url: item.url,
         published_at: item.published_at,

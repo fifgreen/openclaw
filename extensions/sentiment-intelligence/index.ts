@@ -137,7 +137,7 @@ export default definePluginEntry({
             } else if (jobType === "cryptopanic") {
               await cryptoPanicFeed.poll(symbols);
             } else {
-              await macroHandle.handleJob(jobType ?? "");
+              await macroHandle.handleJob(job.name ?? "");
             }
           },
           { connection: redis },
@@ -227,16 +227,43 @@ export default definePluginEntry({
       },
     });
 
-    // Tools are registered with lazy factories — called after start() sets the shared singletons.
-    api.registerTool((_ctx) => buildGetSentimentTool(sharedMemDir!), { names: ["get_sentiment"] });
-    api.registerTool((_ctx) => buildGetMacroContextTool(sharedMemDir!), {
+    // Tools are registered with lazy factories — guard against invocation before start() completes.
+    const getSharedMemDir = (toolName: string): MemDir => {
+      if (!sharedMemDir) {
+        throw new Error(
+          `[sentiment-intelligence] ${toolName} is unavailable until service start() completes`,
+        );
+      }
+      return sharedMemDir;
+    };
+
+    const getSharedPool = (toolName: string): Pool => {
+      if (!sharedPool) {
+        throw new Error(
+          `[sentiment-intelligence] ${toolName} is unavailable until service start() completes`,
+        );
+      }
+      return sharedPool;
+    };
+
+    api.registerTool((_ctx) => buildGetSentimentTool(getSharedMemDir("get_sentiment")), {
+      names: ["get_sentiment"],
+    });
+    api.registerTool((_ctx) => buildGetMacroContextTool(getSharedMemDir("get_macro_context")), {
       names: ["get_macro_context"],
     });
-    api.registerTool((_ctx) => buildGetNewsEventsTool(sharedPool!, sharedNewsOpts), {
+    api.registerTool((_ctx) => buildGetNewsEventsTool(getSharedPool("get_news_events"), sharedNewsOpts), {
       names: ["get_news_events"],
     });
-    api.registerTool((_ctx) => buildGetFeedAccuracyTool(sharedMemDir!, sharedPool!), {
-      names: ["get_feed_accuracy"],
-    });
+    api.registerTool(
+      (_ctx) =>
+        buildGetFeedAccuracyTool(
+          getSharedMemDir("get_feed_accuracy"),
+          getSharedPool("get_feed_accuracy"),
+        ),
+      {
+        names: ["get_feed_accuracy"],
+      },
+    );
   },
 });

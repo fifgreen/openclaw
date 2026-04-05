@@ -107,6 +107,7 @@ export interface NewsEventRow {
   source: string;
   symbols: string[];
   sentiment: string;
+  impact_class?: string;
   relevance_score: number;
   url: string;
   published_at: string; // ISO 8601
@@ -118,14 +119,15 @@ export interface NewsEventRow {
  */
 export async function insertNewsEvent(pool: Pool, event: NewsEventRow): Promise<void> {
   await pool.query(
-    `INSERT INTO news_events (headline, source, symbols, sentiment, relevance_score, url, published_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO news_events (headline, source, symbols, sentiment, impact_class, relevance_score, url, published_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT DO NOTHING`,
     [
       event.headline,
       event.source,
       event.symbols,
       event.sentiment,
+      event.impact_class ?? null,
       event.relevance_score,
       event.url,
       event.published_at,
@@ -152,7 +154,7 @@ export async function queryNewsEvents(
   if (symbol && sinceIso) {
     return queryRows<NewsEventRow>(
       pool,
-      `SELECT headline, source, symbols, sentiment, relevance_score, url, published_at
+      `SELECT headline, source, symbols, sentiment, impact_class, relevance_score, url, published_at
        FROM news_events
        WHERE symbols @> ARRAY[$1]::text[] AND published_at >= $2
        ORDER BY published_at DESC
@@ -164,7 +166,7 @@ export async function queryNewsEvents(
   if (symbol) {
     return queryRows<NewsEventRow>(
       pool,
-      `SELECT headline, source, symbols, sentiment, relevance_score, url, published_at
+      `SELECT headline, source, symbols, sentiment, impact_class, relevance_score, url, published_at
        FROM news_events
        WHERE symbols @> ARRAY[$1]::text[]
        ORDER BY published_at DESC
@@ -175,7 +177,7 @@ export async function queryNewsEvents(
 
   return queryRows<NewsEventRow>(
     pool,
-    `SELECT headline, source, symbols, sentiment, relevance_score, url, published_at
+    `SELECT headline, source, symbols, sentiment, impact_class, relevance_score, url, published_at
      FROM news_events
      ORDER BY published_at DESC
      LIMIT $1`,

@@ -161,33 +161,44 @@ export async function registerMacroJobs(
         return;
       }
 
-      // Upsert each FRED series as a narrow row
-      const upserts = [
-        upsertMacroSnapshot(pool, {
-          series_id: "DTWEXBGS",
-          value: result.dxy ?? 0,
-          unit: "index",
-          effective_date: result.effectiveDate,
-        }),
-        upsertMacroSnapshot(pool, {
-          series_id: "DGS10",
-          value: result.us10y ?? 0,
-          unit: "pct",
-          effective_date: result.effectiveDate,
-        }),
-        upsertMacroSnapshot(pool, {
-          series_id: "M2SL",
-          value: result.m2Supply ?? 0,
-          unit: "billions_usd",
-          effective_date: result.effectiveDate,
-        }),
-        upsertMacroSnapshot(pool, {
-          series_id: "DCOILWTICO",
-          value: result.oilPriceWti ?? 0,
-          unit: "usd_bbl",
-          effective_date: result.effectiveDate,
-        }),
-      ];
+      // Upsert each FRED series as a narrow row (skip null values)
+      const upserts = [];
+      if (result.dxy != null)
+        upserts.push(
+          upsertMacroSnapshot(pool, {
+            series_id: "DTWEXBGS",
+            value: result.dxy,
+            unit: "index",
+            effective_date: result.effectiveDate,
+          }),
+        );
+      if (result.us10y != null)
+        upserts.push(
+          upsertMacroSnapshot(pool, {
+            series_id: "DGS10",
+            value: result.us10y,
+            unit: "pct",
+            effective_date: result.effectiveDate,
+          }),
+        );
+      if (result.m2Supply != null)
+        upserts.push(
+          upsertMacroSnapshot(pool, {
+            series_id: "M2SL",
+            value: result.m2Supply,
+            unit: "billions_usd",
+            effective_date: result.effectiveDate,
+          }),
+        );
+      if (result.oilPriceWti != null)
+        upserts.push(
+          upsertMacroSnapshot(pool, {
+            series_id: "DCOILWTICO",
+            value: result.oilPriceWti,
+            unit: "usd_bbl",
+            effective_date: result.effectiveDate,
+          }),
+        );
       if (result.globalMarketCap != null)
         upserts.push(
           upsertMacroSnapshot(pool, {

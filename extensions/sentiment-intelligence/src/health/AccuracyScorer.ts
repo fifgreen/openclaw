@@ -19,13 +19,13 @@ export async function scoreOutcome(pool: Pool, opts: ScoreOutcomeOptions): Promi
   // For each feed, find the sentiment_snapshot closest to entryTimestamp
   const rows = await pool.query<{
     composite_score: number;
-    recorded_at: string;
+    timestamp: string;
   }>(
-    `SELECT composite_score, recorded_at
+    `SELECT composite_score, timestamp
      FROM sentiment_snapshots
      WHERE symbol = $1
-       AND recorded_at <= $2
-     ORDER BY recorded_at DESC
+       AND timestamp <= $2
+     ORDER BY timestamp DESC
      LIMIT 1`,
     [entrySymbol, entryTimestamp],
   );

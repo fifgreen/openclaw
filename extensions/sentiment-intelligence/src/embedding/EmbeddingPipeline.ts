@@ -134,10 +134,6 @@ export function startEmbeddingPipeline(
     {
       connection: redis,
       concurrency: 2,
-      defaultJobOptions: {
-        attempts: 5,
-        backoff: { type: "exponential", delay: 5_000 },
-      },
     },
   );
 

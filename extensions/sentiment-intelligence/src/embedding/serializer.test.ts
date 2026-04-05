@@ -5,7 +5,7 @@ import { serializeSentiment, serializeMacro } from "./serializer.js";
 
 const mockSnapshot: SentimentSnapshot = {
   symbol: "BTC",
-  fearGreedScore: 72,
+  fearGreedScore: 0.72,
   fearGreedLabel: "greed",
   twitterScore: 0.65,
   tweetVolume: 12000,
@@ -38,7 +38,7 @@ describe("serializeSentiment", () => {
     expect(text).toBeTruthy();
     expect(text).toContain("BTC");
     expect(text).toContain("greed");
-    expect(text).toContain("72.0000");
+    expect(text).toContain("0.7200");
     expect(text).toContain("long");
   });
 

@@ -186,6 +186,7 @@ export async function aggregate(
         type: "sentiment",
         symbol,
         timestamp: snapshot.lastUpdated,
+        payload: snapshot,
       });
     }
   } catch (err: unknown) {
