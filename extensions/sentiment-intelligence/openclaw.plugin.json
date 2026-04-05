@@ -1,0 +1,106 @@
+{
+  "id": "sentiment-intelligence",
+  "kind": "plugin",
+  "displayName": "Sentiment Intelligence",
+  "openclaw.install.npmSpec": "@openclaw/sentiment-intelligence",
+  "openclaw.channel.id": "sentiment-intelligence",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "symbols": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Symbols to track (default: [\"BTC\", \"ETH\"])"
+      },
+      "symbolAliasMap": {
+        "type": "object",
+        "description": "Ticker alias overrides e.g. { \"LUNA\": \"LUNC\" }"
+      },
+      "twitterBearerToken": {
+        "type": "string",
+        "description": "Twitter API Bearer token (SecretRef — never logged)"
+      },
+      "nitterBaseUrl": {
+        "type": "string",
+        "description": "Optional Nitter fallback base URL"
+      },
+      "fredApiKey": {
+        "type": "string",
+        "description": "FRED API key (SecretRef — never logged)"
+      },
+      "coinMarketCapApiKey": {
+        "type": "string",
+        "description": "CoinMarketCap API key (SecretRef — never logged)"
+      },
+      "cryptoPanicApiKey": {
+        "type": "string",
+        "description": "CryptoPanic API auth token (SecretRef — never logged)"
+      },
+      "postgresUrl": {
+        "type": "string",
+        "description": "TimescaleDB/PostgreSQL connection URL (SecretRef — never logged)"
+      },
+      "redisUrl": {
+        "type": "string",
+        "description": "Redis connection URL (default: redis://localhost:6379)"
+      },
+      "ollamaBaseUrl": {
+        "type": "string",
+        "description": "Ollama base URL (default: http://localhost:11434)"
+      },
+      "ollamaEmbedModel": {
+        "type": "string",
+        "description": "Ollama embedding model (default: nomic-embed-text)"
+      },
+      "ollamaClassifyModel": {
+        "type": "string",
+        "description": "Ollama classification model (default: llama3.2)"
+      },
+      "fearGreedIntervalCron": {
+        "type": "string",
+        "description": "Fear & Greed poll cron (default: 0 */4 * * *)"
+      },
+      "twitterIntervalCron": {
+        "type": "string",
+        "description": "Twitter poll cron (default: 0 */4 * * *)"
+      },
+      "redditIntervalCron": {
+        "type": "string",
+        "description": "Reddit poll cron (default: 0 */4 * * *)"
+      },
+      "newsIntervalCron": {
+        "type": "string",
+        "description": "News poll cron (default: */30 * * * *)"
+      },
+      "macroDailyCron": {
+        "type": "string",
+        "description": "FRED daily pull cron (default: 0 9 * * *)"
+      },
+      "macroWeeklyCron": {
+        "type": "string",
+        "description": "FOMC/CPI weekly scrape cron (default: 0 9 * * 1)"
+      },
+      "compositeWeights": {
+        "type": "object",
+        "description": "Override composite weights: { fearGreed: 0.3, twitter: 0.3, reddit: 0.3, funding: 0.1 }"
+      },
+      "regimeRules": {
+        "type": "object",
+        "description": "Override regime classification thresholds"
+      },
+      "newsDefaultLimit": {
+        "type": "number",
+        "description": "Default limit for get_news_events (default: 10)"
+      },
+      "newsMaxLimit": {
+        "type": "number",
+        "description": "Max limit for get_news_events (default: 50)"
+      },
+      "alertChannelId": {
+        "type": "string",
+        "description": "OpenClaw channel ID for feed-stale alerts"
+      }
+    }
+  }
+}
