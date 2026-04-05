@@ -1,0 +1,103 @@
+{
+  "id": "quant-math-engine",
+  "kind": "plugin",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "timescaleUrl": {
+        "type": "string",
+        "description": "TimescaleDB/PostgreSQL connection URL (default: postgres://localhost:5432/trading)"
+      },
+      "symbols": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Symbols to compute quant features for (default: [\"BTC/USDT\", \"ETH/USDT\"])"
+      },
+      "indicators": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "defaultTimeframe": {
+            "type": "string",
+            "description": "Default OHLCV timeframe for indicator computation (default: \"15m\")"
+          },
+          "ohlcvLookback": {
+            "type": "number",
+            "description": "Number of OHLCV candles to fetch for indicator computation (default: 300)"
+          }
+        }
+      },
+      "orderflow": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "windowMs": {
+            "type": "number",
+            "description": "Rolling window in ms for CVD and trade flow (default: 300000 = 5m)"
+          },
+          "largeTradeThresholdUsd": {
+            "type": "number",
+            "description": "Trade size threshold in USD to classify as a large trade (default: 500000)"
+          },
+          "spreadHistoryLength": {
+            "type": "number",
+            "description": "Number of spread samples to maintain for Z-score calculation (default: 100)"
+          }
+        }
+      },
+      "risk": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "maxKellyFraction": {
+            "type": "number",
+            "description": "Maximum fraction of raw Kelly to use for position sizing (default: 0.25)"
+          },
+          "varConfidence95": {
+            "type": "number",
+            "description": "Z-score for 95% VaR confidence (default: 1.645)"
+          },
+          "varConfidence99": {
+            "type": "number",
+            "description": "Z-score for 99% VaR confidence (default: 2.326)"
+          },
+          "maxDrawdownHalt": {
+            "type": "number",
+            "description": "Drawdown fraction at which position sizing returns 0 (default: 0.20)"
+          },
+          "maxPositionRiskPct": {
+            "type": "number",
+            "description": "Maximum fraction of account to risk per position for VaR cap (default: 0.02)"
+          }
+        }
+      },
+      "hurst": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "window": {
+            "type": "number",
+            "description": "Number of periods for rolling Hurst R/S calculation (default: 100)"
+          }
+        }
+      },
+      "cache": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ttlMs": {
+            "type": "number",
+            "description": "Feature vector cache TTL in milliseconds (default: 1000)"
+          }
+        }
+      }
+    }
+  },
+  "openclaw": {
+    "install": {
+      "npmSpec": "@openclaw/quant-math-engine"
+    },
+    "channel": {}
+  }
+}
