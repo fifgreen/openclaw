@@ -36,7 +36,7 @@ export default defineConfig(() => {
     },
     server: {
       host: true,
-      port: 5173,
+      port: Number(process.env.OPENCLAW_UI_PORT ?? 5180),
       strictPort: true,
     },
     plugins: [
