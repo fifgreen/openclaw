@@ -1,3 +1,4 @@
+import { jsonResult } from "openclaw/plugin-sdk/core";
 import type { Pool } from "pg";
 import { queryNewsEvents } from "../db/queries.js";
 import type { NewsEvent } from "../schema/NewsEvent.js";
@@ -65,8 +66,11 @@ export function buildGetNewsEventsTool(pool: Pool, opts: GetNewsEventsOptions = 
       },
       required: [],
     },
-    async execute(params: { symbol?: string; limit?: number }) {
-      return getNewsEvents(pool, params.symbol, params.limit, opts);
+    async execute(_toolCallId: string, params: Record<string, unknown>) {
+      const symbol = typeof params["symbol"] === "string" ? params["symbol"] : undefined;
+      const limit = typeof params["limit"] === "number" ? params["limit"] : undefined;
+      const data = await getNewsEvents(pool, symbol, limit, opts);
+      return jsonResult(data);
     },
   };
 }

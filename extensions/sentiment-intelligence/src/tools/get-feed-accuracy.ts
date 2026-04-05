@@ -1,4 +1,5 @@
 import { createMemDir } from "@openclaw/trading-context/src/memdir/MemDir.js";
+import { jsonResult } from "openclaw/plugin-sdk/core";
 import type { Pool } from "pg";
 import { queryFeedAccuracyStats } from "../health/AccuracyScorer.js";
 import {
@@ -65,8 +66,9 @@ export function buildGetFeedAccuracyTool(memDir: ReturnType<typeof createMemDir>
       properties: {},
       required: [],
     },
-    async execute(_params: Record<string, never>) {
-      return getFeedAccuracy(memDir, pool);
+    async execute(_toolCallId: string, _params: Record<string, unknown>) {
+      const data = await getFeedAccuracy(memDir, pool);
+      return jsonResult(data);
     },
   };
 }

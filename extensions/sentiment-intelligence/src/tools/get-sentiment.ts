@@ -1,4 +1,5 @@
 import { createMemDir } from "@openclaw/trading-context/src/memdir/MemDir.js";
+import { jsonResult } from "openclaw/plugin-sdk/core";
 import { SentimentSnapshotSchema } from "../schema/SentimentSnapshot.js";
 import type { SentimentSnapshot } from "../schema/SentimentSnapshot.js";
 
@@ -43,8 +44,10 @@ export function buildGetSentimentTool(memDir: ReturnType<typeof createMemDir>) {
         },
       },
     },
-    async execute(args: { symbol?: string }): Promise<GetSentimentResult> {
-      return getSentiment(args.symbol, memDir);
+    async execute(_toolCallId: string, params: Record<string, unknown>) {
+      const symbol = typeof params["symbol"] === "string" ? params["symbol"] : undefined;
+      const data = await getSentiment(symbol, memDir);
+      return jsonResult(data);
     },
   };
 }

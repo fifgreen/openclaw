@@ -12,5 +12,5 @@ export interface IFeed<T> {
    * Throws on unrecoverable errors (bad credentials, schema mismatch).
    * On transient errors, logs a warning and returns the last cached value.
    */
-  poll(): Promise<T>;
+  poll(symbol: string): Promise<T>;
 }

@@ -1,6 +1,6 @@
 import { createMemDir } from "@openclaw/trading-context/src/memdir/MemDir.js";
 import type { Queue } from "bullmq";
-import type { Pool } from "../db/client.js";
+import type { Pool } from "pg";
 import type { SentimentSnapshot } from "../schema/SentimentSnapshot.js";
 import { deriveFundingBias } from "./funding-bias.js";
 

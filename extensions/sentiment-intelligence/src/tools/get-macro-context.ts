@@ -1,4 +1,5 @@
 import { createMemDir } from "@openclaw/trading-context/src/memdir/MemDir.js";
+import { jsonResult } from "openclaw/plugin-sdk/core";
 import { MacroContextSchema, type MacroContext } from "../schema/MacroSnapshot.js";
 
 /**
@@ -36,8 +37,9 @@ export function buildGetMacroContextTool(memDir: ReturnType<typeof createMemDir>
       properties: {},
       required: [],
     },
-    async execute(_params: Record<string, never>) {
-      return getMacroContext(memDir);
+    async execute(_toolCallId: string, _params: Record<string, unknown>) {
+      const data = await getMacroContext(memDir);
+      return jsonResult(data);
     },
   };
 }

@@ -1,5 +1,6 @@
+import { jsonResult } from "openclaw/plugin-sdk/core";
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
-import type { OpenClawPluginApi } from "./runtime-api.js";
+import type { AnyAgentTool, OpenClawPluginApi } from "./runtime-api.js";
 import { readRecentJournalEntries } from "./src/engine/Journaler.js";
 import { createRiskGateHook } from "./src/hooks/risk-gate.js";
 
@@ -26,7 +27,8 @@ export default definePluginEntry({
       const cfg = raw as Record<string, unknown>;
       return {
         redisUrl: typeof cfg["redisUrl"] === "string" ? cfg["redisUrl"] : undefined,
-        memDirTimeoutMs: typeof cfg["memDirTimeoutMs"] === "number" ? cfg["memDirTimeoutMs"] : undefined,
+        memDirTimeoutMs:
+          typeof cfg["memDirTimeoutMs"] === "number" ? cfg["memDirTimeoutMs"] : undefined,
         memDirConsecutiveTimeoutThreshold:
           typeof cfg["memDirConsecutiveTimeoutThreshold"] === "number"
             ? cfg["memDirConsecutiveTimeoutThreshold"]
@@ -40,147 +42,158 @@ export default definePluginEntry({
     })();
 
     // Register the before-tool-call risk gate (T018) with config
-    api.on("before_tool_call", createRiskGateHook({
-      redisUrl: config.redisUrl,
-      memDirTimeoutMs: config.memDirTimeoutMs,
-    }));
+    api.on(
+      "before_tool_call",
+      createRiskGateHook({
+        redisUrl: config.redisUrl,
+        memDirTimeoutMs: config.memDirTimeoutMs,
+      }),
+    );
 
     // Register history query tools (T015b / FR-004)
     // History is sourced from the persisted decision journal (JSONL) so it survives across
     // restarts and doesn't require an in-memory session store.
     api.registerTool(
-      (_ctx) => ({
-        name: "get_session_history",
-        description:
-          "Return recent trading decisions from the decision journal for the current month.",
-        parameters: {
-          type: "object" as const,
-          properties: {
-            limit: {
-              type: "number",
-              description: "Maximum number of recent entries to return (default: 20)",
+      (_ctx) =>
+        ({
+          name: "get_session_history",
+          label: "Get Session History",
+          description:
+            "Return recent trading decisions from the decision journal for the current month.",
+          parameters: {
+            type: "object" as const,
+            properties: {
+              limit: {
+                type: "number",
+                description: "Maximum number of recent entries to return (default: 20)",
+              },
             },
+            required: [],
           },
-          required: [],
-        },
-        async execute(_toolCallId: string, params: Record<string, unknown>) {
-          if (!config.journalDir) {
-            return JSON.stringify({ entries: [], note: "journalDir not configured" });
-          }
-          const limit = typeof params["limit"] === "number" ? Math.max(1, params["limit"]) : 20;
-          try {
-            const entries = await readRecentJournalEntries(config.journalDir, limit);
-            return JSON.stringify({ entries, total: entries.length });
-          } catch {
-            return JSON.stringify({ entries: [], error: "journal not yet initialised" });
-          }
-        },
-      }),
+          async execute(_toolCallId: string, params: Record<string, unknown>) {
+            if (!config.journalDir) {
+              return jsonResult({ entries: [], note: "journalDir not configured" });
+            }
+            const limit = typeof params["limit"] === "number" ? Math.max(1, params["limit"]) : 20;
+            try {
+              const entries = await readRecentJournalEntries(config.journalDir, limit);
+              return jsonResult({ entries, total: entries.length });
+            } catch {
+              return jsonResult({ entries: [], error: "journal not yet initialised" });
+            }
+          },
+        }) as AnyAgentTool,
       { names: ["get_session_history"] },
     );
 
     api.registerTool(
-      (_ctx) => ({
-        name: "get_last_decision",
-        description: "Retrieve the most recent journaled trading decision.",
-        parameters: {
-          type: "object" as const,
-          properties: {},
-          required: [],
-        },
-        async execute(_toolCallId: string, _params: Record<string, unknown>) {
-          if (!config.journalDir) {
-            return JSON.stringify({ decision: null, note: "journalDir not configured" });
-          }
-          try {
-            const entries = await readRecentJournalEntries(config.journalDir, 1);
-            return JSON.stringify({ decision: entries[0] ?? null });
-          } catch {
-            return JSON.stringify({ decision: null, error: "journal not yet initialised" });
-          }
-        },
-      }),
+      (_ctx) =>
+        ({
+          name: "get_last_decision",
+          label: "Get Last Decision",
+          description: "Retrieve the most recent journaled trading decision.",
+          parameters: {
+            type: "object" as const,
+            properties: {},
+            required: [],
+          },
+          async execute(_toolCallId: string, _params: Record<string, unknown>) {
+            if (!config.journalDir) {
+              return jsonResult({ decision: null, note: "journalDir not configured" });
+            }
+            try {
+              const entries = await readRecentJournalEntries(config.journalDir, 1);
+              return jsonResult({ decision: entries[0] ?? null });
+            } catch {
+              return jsonResult({ decision: null, error: "journal not yet initialised" });
+            }
+          },
+        }) as AnyAgentTool,
       { names: ["get_last_decision"] },
     );
 
     // Register informational snapshot tools (T019)
     api.registerTool(
-      (_ctx) => ({
-        name: "get_market_snapshot",
-        description:
-          "Read the current MemDir market state snapshot: macro regime, fear/greed, funding rate, and sentiment.",
-        parameters: {
-          type: "object" as const,
-          properties: {
-            symbol: {
-              type: "string",
-              description: "Trading symbol key (e.g. 'btc', 'eth')",
+      (_ctx) =>
+        ({
+          name: "get_market_snapshot",
+          label: "Get Market Snapshot",
+          description:
+            "Read the current MemDir market state snapshot: macro regime, fear/greed, funding rate, and sentiment.",
+          parameters: {
+            type: "object" as const,
+            properties: {
+              symbol: {
+                type: "string",
+                description: "Trading symbol key (e.g. 'btc', 'eth')",
+              },
             },
+            required: ["symbol"],
           },
-          required: ["symbol"],
-        },
-        async execute(_toolCallId: string, params: Record<string, unknown>) {
-          const { createMemDir: mkMemDir } = await import("./src/memdir/MemDir.js");
-          const { getRedisClient } = await import("./src/memdir/index.js");
-          const symbol = typeof params["symbol"] === "string" ? params["symbol"] : "btc";
-          const memDir = mkMemDir({
-            client: getRedisClient(config.redisUrl ? { url: config.redisUrl } : {}),
-            timeoutMs: config.memDirTimeoutMs,
-          });
+          async execute(_toolCallId: string, params: Record<string, unknown>) {
+            const { createMemDir: mkMemDir } = await import("./src/memdir/MemDir.js");
+            const { getRedisClient } = await import("./src/memdir/index.js");
+            const symbol = typeof params["symbol"] === "string" ? params["symbol"] : "btc";
+            const memDir = mkMemDir({
+              client: getRedisClient(config.redisUrl ? { url: config.redisUrl } : {}),
+              timeoutMs: config.memDirTimeoutMs,
+            });
 
-          const [macro, fg, fr, sent, halt] = await Promise.all([
-            memDir.get({ key: "macro_regime", symbol }),
-            memDir.get({ key: "fear_greed", symbol }),
-            memDir.get({ key: "funding_rate", symbol }),
-            memDir.get({ key: "sentiment", symbol }),
-            memDir.get({ key: "trading_halted", symbol: "*" }),
-          ]);
+            const [macro, fg, fr, sent, halt] = await Promise.all([
+              memDir.get({ key: "macro_regime", symbol }),
+              memDir.get({ key: "fear_greed", symbol }),
+              memDir.get({ key: "funding_rate", symbol }),
+              memDir.get({ key: "sentiment", symbol }),
+              memDir.get({ key: "trading_halted", symbol: "*" }),
+            ]);
 
-          return JSON.stringify({
-            symbol,
-            trading_halted: halt?.value ?? null,
-            macro_regime: macro?.value ?? null,
-            fear_greed: fg?.value ?? null,
-            funding_rate: fr?.value ?? null,
-            sentiment: sent?.value ?? null,
-          });
-        },
-      }),
+            return jsonResult({
+              symbol,
+              trading_halted: halt?.value ?? null,
+              macro_regime: macro?.value ?? null,
+              fear_greed: fg?.value ?? null,
+              funding_rate: fr?.value ?? null,
+              sentiment: sent?.value ?? null,
+            });
+          },
+        }) as AnyAgentTool,
       { names: ["get_market_snapshot"] },
     );
 
     api.registerTool(
-      (_ctx) => ({
-        name: "get_quant_features",
-        description:
-          "Read quantitative signal features from MemDir (populated by ingestion agents in Phase 1).",
-        parameters: {
-          type: "object" as const,
-          properties: {
-            symbol: {
-              type: "string",
-              description: "Trading symbol key (e.g. 'btc', 'eth')",
+      (_ctx) =>
+        ({
+          name: "get_quant_features",
+          label: "Get Quant Features",
+          description:
+            "Read quantitative signal features from MemDir (populated by ingestion agents in Phase 1).",
+          parameters: {
+            type: "object" as const,
+            properties: {
+              symbol: {
+                type: "string",
+                description: "Trading symbol key (e.g. 'btc', 'eth')",
+              },
             },
+            required: ["symbol"],
           },
-          required: ["symbol"],
-        },
-        async execute(_toolCallId: string, params: Record<string, unknown>) {
-          const { createMemDir: mkMemDir } = await import("./src/memdir/MemDir.js");
-          const { getRedisClient } = await import("./src/memdir/index.js");
-          const symbol = typeof params["symbol"] === "string" ? params["symbol"] : "btc";
-          const memDir = mkMemDir({
-            client: getRedisClient(config.redisUrl ? { url: config.redisUrl } : {}),
-            timeoutMs: config.memDirTimeoutMs,
-          });
+          async execute(_toolCallId: string, params: Record<string, unknown>) {
+            const { createMemDir: mkMemDir } = await import("./src/memdir/MemDir.js");
+            const { getRedisClient } = await import("./src/memdir/index.js");
+            const symbol = typeof params["symbol"] === "string" ? params["symbol"] : "btc";
+            const memDir = mkMemDir({
+              client: getRedisClient(config.redisUrl ? { url: config.redisUrl } : {}),
+              timeoutMs: config.memDirTimeoutMs,
+            });
 
-          const fr = await memDir.get({ key: "funding_rate", symbol });
-          return JSON.stringify({
-            symbol,
-            funding_rate: fr?.value ?? null,
-            note: "Full quant feature vector available after Phase 1 (market data ingestion) is built.",
-          });
-        },
-      }),
+            const fr = await memDir.get({ key: "funding_rate", symbol });
+            return jsonResult({
+              symbol,
+              funding_rate: fr?.value ?? null,
+              note: "Full quant feature vector available after Phase 1 (market data ingestion) is built.",
+            });
+          },
+        }) as AnyAgentTool,
       { names: ["get_quant_features"] },
     );
   },

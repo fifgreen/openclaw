@@ -49,9 +49,9 @@ describe("buildMacroContext", () => {
 
   it("classifies risk_off when DXY > 104 and US10Y > 4.5 and FOMC hike", async () => {
     vi.mocked(queryLatestMacroSnapshot).mockResolvedValue([
-      { series_id: "DTWEXBGS", value: 105 },
-      { series_id: "DGS10", value: 4.8 },
-      { series_id: "fomcLastAction", value: 1 }, // hike
+      { series_id: "DTWEXBGS", value: 105, unit: "", effective_date: "" },
+      { series_id: "DGS10", value: 4.8, unit: "", effective_date: "" },
+      { series_id: "fomcLastAction", value: 1, unit: "", effective_date: "" }, // hike
     ]);
 
     const macro = await buildMacroContext(mockPool, mockMemDir as never);
@@ -69,8 +69,8 @@ describe("buildMacroContext", () => {
 
   it("sets regime to uncertain when fomcLastAction is missing", async () => {
     vi.mocked(queryLatestMacroSnapshot).mockResolvedValue([
-      { series_id: "DTWEXBGS", value: 106 },
-      { series_id: "DGS10", value: 5.0 },
+      { series_id: "DTWEXBGS", value: 106, unit: "", effective_date: "" },
+      { series_id: "DGS10", value: 5.0, unit: "", effective_date: "" },
       // no fomcLastAction
     ]);
 
@@ -84,8 +84,8 @@ describe("buildMacroContext", () => {
     const fomcDate = new Date("2025-06-18").getTime();
     const cpiDate = new Date("2025-06-12").getTime();
     vi.mocked(queryLatestMacroSnapshot).mockResolvedValue([
-      { series_id: "fomcNextDate", value: fomcDate },
-      { series_id: "cpiNextDate", value: cpiDate },
+      { series_id: "fomcNextDate", value: fomcDate, unit: "", effective_date: "" },
+      { series_id: "cpiNextDate", value: cpiDate, unit: "", effective_date: "" },
     ]);
 
     const macro = await buildMacroContext(mockPool, mockMemDir as never);
