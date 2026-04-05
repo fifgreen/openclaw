@@ -1,0 +1,28 @@
+{
+  "name": "@openclaw/quant-math-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenClaw quantitative math engine plugin — technical indicators, order flow analytics, statistical models, and risk mathematics for trading agents",
+  "type": "module",
+  "dependencies": {
+    "pg": "^8.13.3",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.11",
+    "openclaw": "workspace:*"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.4.1-beta.1"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

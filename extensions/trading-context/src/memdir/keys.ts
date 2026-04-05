@@ -58,6 +58,56 @@ export const Us10ySchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// Sentiment intelligence schemas (added by @openclaw/sentiment-intelligence)
+// ---------------------------------------------------------------------------
+
+export const SentimentSubfeedFearGreedSchema = z.object({
+  score: z.number(),
+  label: z.enum(["extreme_fear", "fear", "neutral", "greed", "extreme_greed"]),
+  lastUpdated: z.string(),
+});
+
+export const SentimentSubfeedSocialSchema = z.object({
+  score: z.number(),
+  postVolume: z.number(),
+  lastUpdated: z.string(),
+});
+
+export const SentimentCompositeSchema = z.object({
+  symbol: z.string(),
+  fearGreedScore: z.number(),
+  fearGreedLabel: z.enum(["extreme_fear", "fear", "neutral", "greed", "extreme_greed"]),
+  twitterScore: z.number(),
+  tweetVolume: z.number(),
+  redditScore: z.number(),
+  redditPostVolume: z.number(),
+  fundingBias: z.enum(["long", "short", "neutral"]),
+  fundingRate: z.number(),
+  compositeScore: z.number(),
+  lastUpdated: z.string(),
+});
+
+export const MacroSnapshotSchema = z.object({
+  dxy: z.number().nullable(),
+  us10y: z.number().nullable(),
+  m2Supply: z.number().nullable(),
+  oilPriceWti: z.number().nullable(),
+  globalMarketCap: z.number().nullable(),
+  btcDominance: z.number().nullable(),
+  fomcNextDate: z.string().nullable(),
+  fomcLastAction: z.enum(["hold", "cut", "hike"]).nullable(),
+  cpiLastReading: z.number().nullable(),
+  cpiNextDate: z.string().nullable(),
+  regime: z.enum(["risk_on", "risk_off", "neutral", "uncertain"]),
+  lastUpdated: z.string(),
+});
+
+export const SentimentHealthSchema = z.object({
+  lastSuccessfulPoll: z.string(),
+  isStale: z.boolean(),
+});
+
+// ---------------------------------------------------------------------------
 // Key registry — maps logical key names to their schemas and TTL defaults.
 // ---------------------------------------------------------------------------
 
@@ -106,6 +156,37 @@ export const MEMDIR_KEY_REGISTRY = {
     schema: z.number(),
     ttlMs: null,
     scope: "agent" as const,
+  },
+  // Sentiment intelligence keys
+  sentiment_subfeed_fear_greed: {
+    schema: SentimentSubfeedFearGreedSchema,
+    ttlMs: 4 * 60 * 60 * 1000, // 4h
+    scope: "feed" as const,
+  },
+  sentiment_subfeed_twitter: {
+    schema: SentimentSubfeedSocialSchema,
+    ttlMs: 4 * 60 * 60 * 1000, // 4h
+    scope: "feed" as const,
+  },
+  sentiment_subfeed_reddit: {
+    schema: SentimentSubfeedSocialSchema,
+    ttlMs: 4 * 60 * 60 * 1000, // 4h
+    scope: "feed" as const,
+  },
+  sentiment_composite: {
+    schema: SentimentCompositeSchema,
+    ttlMs: 60 * 60 * 1000, // 1h
+    scope: "feed" as const,
+  },
+  sentiment_health: {
+    schema: SentimentHealthSchema,
+    ttlMs: null, // never expires — manually GC'd
+    scope: "feed" as const,
+  },
+  macro_snapshot: {
+    schema: MacroSnapshotSchema,
+    ttlMs: 24 * 60 * 60 * 1000, // 24h
+    scope: "global" as const,
   },
 } as const;
 

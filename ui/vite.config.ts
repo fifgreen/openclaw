@@ -36,7 +36,12 @@ export default defineConfig(() => {
     },
     server: {
       host: true,
-      port: 5173,
+      port: (() => {
+        const envPort = process.env.OPENCLAW_UI_PORT;
+        if (!envPort) return 5180;
+        const parsed = Number.parseInt(envPort, 10);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : 5180;
+      })(),
       strictPort: true,
     },
     plugins: [
